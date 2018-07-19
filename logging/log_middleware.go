@@ -9,12 +9,29 @@ import (
 )
 
 type LogMiddleware struct {
-	Next http.Handler
+	Next      http.Handler
+	panicCode int
 }
 
-func NewLogMiddleware(next http.Handler) *LogMiddleware {
-	return &LogMiddleware{
+type LogOption func(*LogMiddleware)
+
+// NewLogMiddleware returns a new log handler wrapping a given handler.
+// Further configuration can be done by passing relevant option functions.
+func NewLogMiddleware(next http.Handler, options ...LogOption) *LogMiddleware {
+	lmw := &LogMiddleware{
 		Next: next,
+	}
+	for i := range options {
+		options[i](lmw)
+	}
+	return lmw
+}
+
+// WithPanicStatus modifies the middleware so that it reponds with a given statuscode if a panic occurs.
+// Respectively not setting this will not modify the response code in any way.
+func WithPanicStatus(statusCode int) LogOption {
+	return func(lmw *LogMiddleware) {
+		lmw.panicCode = statusCode
 	}
 }
 
@@ -25,6 +42,9 @@ func (mw *LogMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			AccessError(r, start, fmt.Errorf("PANIC (%v): %v", identifyLogOrigin(), rec))
+			if mw.panicCode != 0 {
+				w.WriteHeader(mw.panicCode)
+			}
 		}
 	}()
 

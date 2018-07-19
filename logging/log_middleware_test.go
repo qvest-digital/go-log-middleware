@@ -2,10 +2,11 @@ package logging
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_LogMiddleware_Panic(t *testing.T) {
@@ -27,6 +28,31 @@ func Test_LogMiddleware_Panic(t *testing.T) {
 
 	data := logRecordFromBuffer(b)
 	a.Contains(data.Error, "logging.Test_LogMiddleware_Panic.func1")
+	a.Contains(data.Error, "runtime error: index out of range")
+	a.Contains(data.Message, "ERROR ->GET /foo")
+	a.Equal(data.Level, "error")
+}
+
+func Test_LogMiddleware_Panic_With_500_Resp(t *testing.T) {
+	a := assert.New(t)
+
+	// given: a logger
+	b := bytes.NewBuffer(nil)
+	Logger.Out = b
+
+	// and a handler which raises a panic and returns a 500 response
+	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		i := []int{}
+		i[100]++
+	}), WithPanicStatus(500))
+
+	r, _ := http.NewRequest("GET", "http://www.example.org/foo", nil)
+	rw := httptest.NewRecorder()
+	lm.ServeHTTP(rw, r)
+
+	data := logRecordFromBuffer(b)
+	a.Equal(rw.Code, 500)
+	a.Contains(data.Error, "logging.Test_LogMiddleware_Panic_With_500_Resp.func1")
 	a.Contains(data.Error, "runtime error: index out of range")
 	a.Contains(data.Message, "ERROR ->GET /foo")
 	a.Equal(data.Level, "error")
