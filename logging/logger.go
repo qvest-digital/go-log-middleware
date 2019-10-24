@@ -3,8 +3,10 @@ package logging
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tarent/logrus"
+	"github.com/bshuster-repo/logrus-logstash-hook"
+	"github.com/sirupsen/logrus"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -13,12 +15,14 @@ import (
 var Logger *logrus.Logger
 
 // The of cookies which should not be logged
-var AccessLogCookiesBlacklist = []string{}
+var AccessLogCookiesBlacklist []string
 
 var LifecycleEnvVars = []string{"BUILD_NUMBER", "BUILD_HASH", "BUILD_DATE"}
 
+var AnonymizeQueryParams bool
+
 func init() {
-	Set("info", false)
+	_ = Set("info", false)
 }
 
 // Set creates a new Logger with the matching specification
@@ -32,7 +36,7 @@ func Set(level string, textLogging bool) error {
 	if textLogging {
 		logger.Formatter = &logrus.TextFormatter{}
 	} else {
-		logger.Formatter = &LogstashFormatter{TimestampFormat: time.RFC3339Nano}
+		logger.Formatter = logrustash.DefaultFormatter(logrus.Fields{})
 	}
 	logger.Level = l
 	Logger = logger
@@ -66,16 +70,12 @@ func AccessError(r *http.Request, start time.Time, err error) {
 }
 
 func access(r *http.Request, start time.Time, statusCode int, err error) *logrus.Entry {
-	url := r.URL.Path
-	if r.URL.RawQuery != "" {
-		url += "?" + r.URL.RawQuery
-	}
 	fields := logrus.Fields{
 		"type":       "access",
 		"@timestamp": start,
 		"remote_ip":  getRemoteIp(r),
 		"host":       r.Host,
-		"url":        url,
+		"url":        buildFullPath(r),
 		"method":     r.Method,
 		"proto":      r.Proto,
 		"duration":   time.Since(start).Nanoseconds() / 1000000,
@@ -107,15 +107,11 @@ func access(r *http.Request, start time.Time, statusCode int, err error) *logrus
 
 // Call logs the result of an outgoing call
 func Call(r *http.Request, resp *http.Response, start time.Time, err error) {
-	url := r.URL.Path
-	if r.URL.RawQuery != "" {
-		url += "?" + r.URL.RawQuery
-	}
 	fields := logrus.Fields{
 		"type":       "call",
 		"@timestamp": start,
 		"host":       r.Host,
-		"url":        url,
+		"url":        buildFullPath(r),
 		"full_url":   r.URL.String(),
 		"method":     r.Method,
 		"duration":   time.Since(start).Nanoseconds() / 1000000,
@@ -166,7 +162,7 @@ func Cacheinfo(url string, hit bool) {
 }
 
 // Return a log entry for application logs,
-// prefilled with the correlation ids out of the supplied request.
+// pre-filled with the correlation ids out of the supplied request.
 func Application(h http.Header) *logrus.Entry {
 	fields := logrus.Fields{
 		"type": "application",
@@ -245,4 +241,17 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func buildFullPath(r *http.Request) string {
+	query := r.URL.Query()
+
+	if AnonymizeQueryParams {
+		for param := range query {
+			query[param] = []string{"*****"}
+		}
+	}
+
+	queryString, _ := url.QueryUnescape(query.Encode())
+	return fmt.Sprintf("%s?%s", r.URL.Path, queryString)
 }
