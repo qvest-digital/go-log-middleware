@@ -19,7 +19,8 @@ var AccessLogCookiesBlacklist []string
 
 var LifecycleEnvVars = []string{"BUILD_NUMBER", "BUILD_HASH", "BUILD_DATE"}
 
-var AnonymizeQueryParams bool
+// List of query params that should be anonymized
+var AnonymizeQueryParams []string
 
 func init() {
 	_ = Set("info", false)
@@ -246,10 +247,8 @@ func contains(s []string, e string) bool {
 func buildFullPath(r *http.Request) string {
 	query := r.URL.Query()
 
-	if AnonymizeQueryParams {
-		for param := range query {
-			query[param] = []string{"*****"}
-		}
+	for _, param := range AnonymizeQueryParams {
+		query[param] = []string{"*****"}
 	}
 
 	queryString, _ := url.QueryUnescape(query.Encode())

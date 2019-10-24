@@ -109,10 +109,10 @@ func Test_Logger_Call(t *testing.T) {
 	a.Equal("call", data.Type)
 	a.Equal("/foo?q=bar", data.URL)
 
-	// when we call it with AnonymizeQueryParams = true
+	// when we call it with AnonymizeQueryParams set
 	b.Reset()
-	AnonymizeQueryParams = true
-	defer func() { AnonymizeQueryParams = false }()
+	AnonymizeQueryParams = []string{"q"}
+	defer func() { AnonymizeQueryParams = nil }()
 	start = time.Now().Add(-1 * time.Second)
 	Call(r, nil, start, errors.New("oops"))
 
@@ -175,10 +175,10 @@ func Test_Logger_Access(t *testing.T) {
 	a.Equal("/foo?q=bar", data.URL)
 	a.Equal("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36", data.UserAgent)
 
-	// when we call it with AnonymizeQueryParams = true
+	// when we call it with AnonymizeQueryParams set
 	b.Reset()
-	AnonymizeQueryParams = true
-	defer func() { AnonymizeQueryParams = false }()
+	AnonymizeQueryParams = []string{"q"}
+	defer func() { AnonymizeQueryParams = nil }()
 	start = time.Now().Add(-1 * time.Second)
 	Access(r, start, 201)
 
