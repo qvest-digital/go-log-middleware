@@ -19,6 +19,7 @@ type logRecord struct {
 	RemoteIp       string            `json:"remote_ip"`
 	Host           string            `json:"host"`
 	URL            string            `json:"url"`
+	FullURL        string            `json:"full_url"`
 	Method         string            `json:"method"`
 	Proto          string            `json:"proto"`
 	Duration       int               `json:"duration"`
@@ -88,6 +89,7 @@ func Test_Logger_Call(t *testing.T) {
 	a.Equal(404, data.ResponseStatus)
 	a.Equal("call", data.Type)
 	a.Equal("/foo?q=bar", data.URL)
+	a.Equal("http://www.example.org/foo?q=bar", data.FullURL)
 
 	// when we call with an error
 	b.Reset()
@@ -108,28 +110,35 @@ func Test_Logger_Call(t *testing.T) {
 	a.Equal("GET", data.Method)
 	a.Equal("call", data.Type)
 	a.Equal("/foo?q=bar", data.URL)
+	a.Equal("http://www.example.org/foo?q=bar", data.FullURL)
 
-	// when we call it with AnonymizedQueryParams set
+	resp = &http.Response{
+		StatusCode: 404,
+		Header:     http.Header{"Content-Type": {"text/html"}},
+	}
+
+	// when we call it with AnonymizedQueryParams set and error
 	b.Reset()
 	AnonymizedQueryParams = []string{"q"}
 	defer func() { AnonymizedQueryParams = nil }()
 	start = time.Now().Add(-1 * time.Second)
-	Call(r, nil, start, errors.New("oops"))
+	Call(r, resp, start, nil)
 
 	// then: all fields match
 	data = &logRecord{}
 	err = json.Unmarshal(b.Bytes(), data)
 	a.NoError(err)
 
-	a.Equal("error", data.Level)
-	a.Equal("oops", data.Error)
-	a.Equal("oops", data.Message)
+	a.Equal("warning", data.Level)
+	a.Equal("", data.Error)
+	a.Equal("404 GET-> http://www.example.org/foo?q=*****", data.Message)
 	a.Equal("correlation-123", data.CorrelationId)
 	a.InDelta(1000, data.Duration, 0.5)
 	a.Equal("www.example.org", data.Host)
 	a.Equal("GET", data.Method)
 	a.Equal("call", data.Type)
 	a.Equal("/foo?q=*****", data.URL)
+	a.Equal("http://www.example.org/foo?q=*****", data.FullURL)
 }
 
 func Test_Logger_Access(t *testing.T) {

@@ -113,7 +113,7 @@ func Call(r *http.Request, resp *http.Response, start time.Time, err error) {
 		"@timestamp": start,
 		"host":       r.Host,
 		"url":        buildFullPath(r),
-		"full_url":   r.URL.String(),
+		"full_url":   buildFullUrl(r),
 		"method":     r.Method,
 		"duration":   time.Since(start).Nanoseconds() / 1000000,
 	}
@@ -130,7 +130,7 @@ func Call(r *http.Request, resp *http.Response, start time.Time, err error) {
 		fields["response_status"] = resp.StatusCode
 		fields["content_type"] = resp.Header.Get("Content-Type")
 		e := Logger.WithFields(fields)
-		msg := fmt.Sprintf("%v %v-> %v", resp.StatusCode, r.Method, r.URL.String())
+		msg := fmt.Sprintf("%v %v-> %v", resp.StatusCode, r.Method, buildFullUrl(r))
 
 		if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
 			e.Info(msg)
@@ -248,6 +248,10 @@ func buildFullPath(r *http.Request) string {
 
 	queryString, _ := url.QueryUnescape(queryParams.Encode())
 	return fmt.Sprintf("%s?%s", r.URL.Path, queryString)
+}
+
+func buildFullUrl(r *http.Request) string {
+	return fmt.Sprintf("%s://%s%s", r.URL.Scheme, r.URL.Hostname(), buildFullPath(r))
 }
 
 func contains(s []string, e string) bool {
