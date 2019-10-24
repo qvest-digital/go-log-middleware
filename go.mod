@@ -1,4 +1,4 @@
-module github.com/tarent/go-log-middleware/v2
+module github.com/tarent/go-log-middleware
 
 go 1.13
 
