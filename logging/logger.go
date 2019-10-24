@@ -235,6 +235,21 @@ func setCorrelationIds(fields logrus.Fields, h http.Header) {
 	}
 }
 
+func buildFullPath(r *http.Request) string {
+	queryParams := make(url.Values, len(r.URL.Query()))
+
+	for key, value := range r.URL.Query() {
+		if contains(AnonymizedQueryParams, key) {
+			queryParams[key] = []string{"*****"}
+		} else {
+			queryParams[key] = value
+		}
+	}
+
+	queryString, _ := url.QueryUnescape(queryParams.Encode())
+	return fmt.Sprintf("%s?%s", r.URL.Path, queryString)
+}
+
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
@@ -242,17 +257,4 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
-}
-
-func buildFullPath(r *http.Request) string {
-	query := r.URL.Query()
-
-	for _, param := range AnonymizedQueryParams {
-		if query[param] != nil {
-			query[param] = []string{"*****"}
-		}
-	}
-
-	queryString, _ := url.QueryUnescape(query.Encode())
-	return fmt.Sprintf("%s?%s", r.URL.Path, queryString)
 }

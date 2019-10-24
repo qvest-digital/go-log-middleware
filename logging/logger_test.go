@@ -358,6 +358,18 @@ func Test_Logger_GetRemoteIp3(t *testing.T) {
 	a.Equal("1234", ret)
 }
 
+func Test_buildFullPath(t *testing.T) {
+	AnonymizedQueryParams = []string{"q1", "q3"}
+	defer func() { AnonymizedQueryParams = nil }()
+
+	req, _ := http.NewRequest("GET", "test.com?q1=hello&q2=world", nil)
+	path := buildFullPath(req)
+
+	assert.Contains(t, path, "q1=*****")
+	assert.Contains(t, path, "q2=world")
+	assert.NotContains(t, path, "q3=")
+}
+
 func logRecordFromBuffer(b *bytes.Buffer) *logRecord {
 	data := &logRecord{}
 	err := json.Unmarshal(b.Bytes(), data)
