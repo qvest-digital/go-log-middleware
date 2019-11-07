@@ -247,7 +247,12 @@ func buildFullPath(r *http.Request) string {
 	}
 
 	queryString, _ := url.QueryUnescape(queryParams.Encode())
-	return fmt.Sprintf("%s?%s", r.URL.Path, queryString)
+	if queryString != "" {
+		return fmt.Sprintf("%s?%s", r.URL.Path, queryString)
+	} else {
+		return fmt.Sprintf("%s", r.URL.Path)
+	}
+
 }
 
 func buildFullUrl(r *http.Request) string {
