@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/bshuster-repo/logrus-logstash-hook"
@@ -256,7 +257,15 @@ func buildFullPath(r *http.Request) string {
 }
 
 func buildFullUrl(r *http.Request) string {
-	return fmt.Sprintf("%s://%s%s", r.URL.Scheme, r.URL.Hostname(), buildFullPath(r))
+	var buffer bytes.Buffer
+	buffer.WriteString(r.URL.Scheme + "://")
+	buffer.WriteString(r.URL.Hostname())
+	if r.URL.Port() != "" {
+		buffer.WriteString(":" + r.URL.Port())
+	}
+	buffer.WriteString(buildFullPath(r))
+
+	return buffer.String()
 }
 
 func contains(s []string, e string) bool {
