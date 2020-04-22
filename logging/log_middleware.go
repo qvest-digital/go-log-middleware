@@ -48,7 +48,7 @@ func (mw *LogMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	lrw := &logResponseWriter{ResponseWriter: w}
+	lrw := &logResponseWriter{ResponseWriter: w, statusCode: 200}
 	mw.Next.ServeHTTP(lrw, r)
 
 	Access(r, start, lrw.statusCode)
@@ -90,9 +90,6 @@ type logResponseWriter struct {
 }
 
 func (lrw *logResponseWriter) Write(b []byte) (int, error) {
-	if lrw.statusCode == 0 {
-		lrw.statusCode = 200
-	}
 	return lrw.ResponseWriter.Write(b)
 }
 

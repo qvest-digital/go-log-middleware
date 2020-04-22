@@ -103,3 +103,26 @@ func Test_LogMiddleware_Log_404(t *testing.T) {
 	a.Equal(404, data.ResponseStatus)
 	a.Equal("warning", data.Level)
 }
+
+func Test_LogMiddleware_Log_Default_Response_Code(t *testing.T) {
+	a := assert.New(t)
+
+	// given: a logger
+	b := bytes.NewBuffer(nil)
+	Logger.Out = b
+
+	// and a handler which gets no explicit response code (default 200)
+	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//do nothing
+	}))
+
+	r, _ := http.NewRequest("GET", "http://www.example.org/foo", nil)
+
+	lm.ServeHTTP(httptest.NewRecorder(), r)
+
+	data := logRecordFromBuffer(b)
+	a.Equal("", data.Error)
+	a.Equal("200 ->GET /foo", data.Message)
+	a.Equal(200, data.ResponseStatus)
+	a.Equal("info", data.Level)
+}
