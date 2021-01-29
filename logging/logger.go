@@ -234,6 +234,10 @@ func setCorrelationIds(fields logrus.Fields, h http.Header) {
 	if correlationId != "" {
 		fields["correlation_id"] = correlationId
 	}
+	userCorrelationId := GetUserCorrelationId(h)
+	if userCorrelationId != "" {
+		fields["user_correlation_id"] = userCorrelationId
+	}
 }
 
 func buildFullPath(r *http.Request) string {
