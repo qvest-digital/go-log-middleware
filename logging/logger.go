@@ -34,11 +34,24 @@ func Set(level string, textLogging bool) error {
 		return err
 	}
 
+	fm := logrus.FieldMap{
+		logrus.FieldKeyTime: "@timestamp",
+		logrus.FieldKeyMsg:  "message",
+	}
+
 	logger := logrus.New()
 	if textLogging {
-		logger.Formatter = &logrus.TextFormatter{}
+		logger.Formatter = &logrus.TextFormatter{
+			TimestampFormat: time.RFC3339Nano,
+			FieldMap:        fm,
+		}
 	} else {
-		logger.Formatter = logrustash.DefaultFormatter(logrus.Fields{})
+		logger.Formatter = logrustash.LogstashFormatter{
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: time.RFC3339Nano,
+				FieldMap:        fm,
+			},
+		}
 	}
 	logger.Level = l
 	Logger = logger
@@ -74,7 +87,6 @@ func AccessError(r *http.Request, start time.Time, err error) {
 func access(r *http.Request, start time.Time, statusCode int, err error) *logrus.Entry {
 	fields := logrus.Fields{
 		"type":       "access",
-		"@timestamp": start,
 		"remote_ip":  getRemoteIp(r),
 		"host":       r.Host,
 		"url":        buildFullPath(r),
@@ -110,13 +122,12 @@ func access(r *http.Request, start time.Time, statusCode int, err error) *logrus
 // Call logs the result of an outgoing call
 func Call(r *http.Request, resp *http.Response, start time.Time, err error) {
 	fields := logrus.Fields{
-		"type":       "call",
-		"@timestamp": start,
-		"host":       r.Host,
-		"url":        buildFullPath(r),
-		"full_url":   buildFullUrl(r),
-		"method":     r.Method,
-		"duration":   time.Since(start).Nanoseconds() / 1000000,
+		"type":     "call",
+		"host":     r.Host,
+		"url":      buildFullPath(r),
+		"full_url": buildFullUrl(r),
+		"method":   r.Method,
+		"duration": time.Since(start).Nanoseconds() / 1000000,
 	}
 
 	setCorrelationIds(fields, r.Header)
