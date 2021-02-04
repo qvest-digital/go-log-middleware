@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
@@ -13,7 +12,8 @@ import (
 	"time"
 )
 
-var Logger *logrus.Logger
+var Logger *logrus.Entry
+var logger *logrus.Logger
 
 // The of cookies which should not be logged
 var AccessLogCookiesBlacklist []string
@@ -34,14 +34,30 @@ func Set(level string, textLogging bool) error {
 		return err
 	}
 
-	logger := logrus.New()
-	if textLogging {
-		logger.Formatter = &logrus.TextFormatter{}
-	} else {
-		logger.Formatter = logrustash.DefaultFormatter(logrus.Fields{})
+	logger = logrus.New()
+	logger.SetLevel(l)
+
+	fm := logrus.FieldMap{
+		logrus.FieldKeyTime: "@timestamp",
+		logrus.FieldKeyMsg:  "message",
 	}
-	logger.Level = l
-	Logger = logger
+
+	if textLogging {
+		logger.Formatter = &logrus.TextFormatter{
+			TimestampFormat: time.RFC3339Nano,
+			FieldMap:        fm,
+		}
+	} else {
+		logger.Formatter = &logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+			FieldMap:        fm,
+		}
+	}
+
+	Logger = logger.WithFields(logrus.Fields{
+		"@version": "1",
+		"type":     "log",
+	})
 	return nil
 }
 
@@ -74,7 +90,6 @@ func AccessError(r *http.Request, start time.Time, err error) {
 func access(r *http.Request, start time.Time, statusCode int, err error) *logrus.Entry {
 	fields := logrus.Fields{
 		"type":       "access",
-		"@timestamp": start,
 		"remote_ip":  getRemoteIp(r),
 		"host":       r.Host,
 		"url":        buildFullPath(r),
@@ -110,13 +125,12 @@ func access(r *http.Request, start time.Time, statusCode int, err error) *logrus
 // Call logs the result of an outgoing call
 func Call(r *http.Request, resp *http.Response, start time.Time, err error) {
 	fields := logrus.Fields{
-		"type":       "call",
-		"@timestamp": start,
-		"host":       r.Host,
-		"url":        buildFullPath(r),
-		"full_url":   buildFullUrl(r),
-		"method":     r.Method,
-		"duration":   time.Since(start).Nanoseconds() / 1000000,
+		"type":     "call",
+		"host":     r.Host,
+		"url":      buildFullPath(r),
+		"full_url": buildFullUrl(r),
+		"method":   r.Method,
+		"duration": time.Since(start).Nanoseconds() / 1000000,
 	}
 
 	setCorrelationIds(fields, r.Header)

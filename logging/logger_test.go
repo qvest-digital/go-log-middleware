@@ -35,20 +35,22 @@ type logRecord struct {
 func Test_Logger_Set(t *testing.T) {
 	a := assert.New(t)
 
+	logrus.New()
+
 	// given: an error logger in text format
 	Set("error", true)
 	defer Set("info", false)
-	Logger.Formatter.(*logrus.TextFormatter).DisableColors = true
+	logger.Formatter.(*logrus.TextFormatter).DisableColors = true
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// when: I log something
 	Logger.Info("should be ignored ..")
 	Logger.WithField("foo", "bar").Error("oops")
 
-	// then: only the error text is contained
+	// then: only the timestamp error text is contained
 	// and it is text formated
-	a.Regexp(`^time.* level\=error msg\=oops foo\=bar.*`, b.String())
+	a.Regexp(`^@timestamp="(.*?)" level\=error message\=oops @version=1 foo\=bar.* type=log`, b.String())
 }
 
 func Test_Logger_Call(t *testing.T) {
@@ -56,9 +58,8 @@ func Test_Logger_Call(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 	AccessLogCookiesBlacklist = []string{"ignore", "user_id"}
-
 	// and a request
 	r, _ := http.NewRequest("GET", "http://www.example.org/foo?q=bar", nil)
 	r.Header = http.Header{
@@ -94,6 +95,9 @@ func Test_Logger_Call(t *testing.T) {
 	a.Equal("/foo?q=bar", data.URL)
 	a.Equal("http://www.example.org/foo?q=bar", data.FullURL)
 
+	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
+
 	// when we call with an error
 	b.Reset()
 	start = time.Now().Add(-1 * time.Second)
@@ -115,6 +119,9 @@ func Test_Logger_Call(t *testing.T) {
 	a.Equal("call", data.Type)
 	a.Equal("/foo?q=bar", data.URL)
 	a.Equal("http://www.example.org/foo?q=bar", data.FullURL)
+
+	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
 
 	resp = &http.Response{
 		StatusCode: 404,
@@ -144,6 +151,10 @@ func Test_Logger_Call(t *testing.T) {
 	a.Equal("call", data.Type)
 	a.Equal("/foo?q=*****", data.URL)
 	a.Equal("http://www.example.org/foo?q=*****", data.FullURL)
+
+	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
+
 }
 
 func Test_Logger_Access(t *testing.T) {
@@ -151,7 +162,7 @@ func Test_Logger_Access(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 	AccessLogCookiesBlacklist = []string{"ignore", "user_id"}
 
 	// Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36
@@ -191,6 +202,9 @@ func Test_Logger_Access(t *testing.T) {
 	a.Equal("/foo?q=bar", data.URL)
 	a.Equal("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36", data.UserAgent)
 
+	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
+
 	// when we call it with AnonymizedQueryParams set
 	b.Reset()
 	AnonymizedQueryParams = []string{"q"}
@@ -218,6 +232,10 @@ func Test_Logger_Access(t *testing.T) {
 	a.Equal("access", data.Type)
 	a.Equal("/foo?q=*****", data.URL)
 	a.Equal("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36", data.UserAgent)
+
+	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
+
 }
 
 func Test_Logger_Access_ErrorCases(t *testing.T) {
@@ -225,7 +243,7 @@ func Test_Logger_Access_ErrorCases(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a request
 	r, _ := http.NewRequest("GET", "http://www.example.org/foo", nil)
@@ -252,6 +270,9 @@ func Test_Logger_Access_ErrorCases(t *testing.T) {
 	a.Equal("error", data.Level)
 	a.Equal("oops", data.Error)
 	a.Equal("ERROR ->GET /foo", data.Message)
+
+	_, err := time.Parse(time.RFC3339Nano, data.Timestamp)
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
 }
 
 func Test_Logger_Application(t *testing.T) {
@@ -274,7 +295,7 @@ func Test_Logger_LifecycleStart(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and
 	someArguments := struct {
@@ -299,6 +320,9 @@ func Test_Logger_LifecycleStart(t *testing.T) {
 	a.Equal("bar", data["Foo"])
 	a.Equal(42.0, data["Number"])
 	a.Equal("b666", data["build_number"])
+	_, err := time.Parse(time.RFC3339Nano, data["@timestamp"].(string))
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
+
 }
 
 func Test_Logger_LifecycleStop(t *testing.T) {
@@ -306,7 +330,7 @@ func Test_Logger_LifecycleStop(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and an Environment Variable with the Build Number is set
 	os.Setenv("BUILD_NUMBER", "b666")
@@ -322,6 +346,8 @@ func Test_Logger_LifecycleStop(t *testing.T) {
 	a.Equal("stop", data["event"])
 	a.Equal("interrupt", data["signal"])
 	a.Equal("b666", data["build_number"])
+	_, err := time.Parse(time.RFC3339Nano, data["@timestamp"].(string))
+	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
 }
 
 func Test_Logger_Cacheinfo(t *testing.T) {
@@ -331,7 +357,7 @@ func Test_Logger_Cacheinfo(t *testing.T) {
 	Set("debug", false)
 	defer Set("info", false)
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// when a positive cachinfo is logged
 	Cacheinfo("/foo", true)

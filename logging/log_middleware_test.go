@@ -14,7 +14,7 @@ func Test_LogMiddleware_Panic(t *testing.T) {
 
 	// given: a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a handler which raises a panic
 	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func Test_LogMiddleware_Panic_With_500_Resp(t *testing.T) {
 
 	// given: a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a handler which raises a panic and returns a 500 response
 	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +63,7 @@ func Test_LogMiddleware_Log_implicit200(t *testing.T) {
 
 	// given: a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a handler which gets an 200er code implicitly
 	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +86,7 @@ func Test_LogMiddleware_Log_404(t *testing.T) {
 
 	// given: a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a handler which gets an 404er code explicitly
 	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +109,7 @@ func Test_LogMiddleware_Log_Default_Response_Code(t *testing.T) {
 
 	// given: a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a handler which gets no explicit response code (default 200)
 	lm := NewLogMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
