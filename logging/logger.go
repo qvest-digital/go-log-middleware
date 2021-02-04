@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
@@ -13,7 +12,8 @@ import (
 	"time"
 )
 
-var Logger *logrus.Logger
+var Logger *logrus.Entry
+var logger *logrus.Logger
 
 // The of cookies which should not be logged
 var AccessLogCookiesBlacklist []string
@@ -34,27 +34,30 @@ func Set(level string, textLogging bool) error {
 		return err
 	}
 
+	logger = logrus.New()
+	logger.SetLevel(l)
+
 	fm := logrus.FieldMap{
 		logrus.FieldKeyTime: "@timestamp",
 		logrus.FieldKeyMsg:  "message",
 	}
 
-	logger := logrus.New()
 	if textLogging {
 		logger.Formatter = &logrus.TextFormatter{
 			TimestampFormat: time.RFC3339Nano,
 			FieldMap:        fm,
 		}
 	} else {
-		logger.Formatter = logrustash.LogstashFormatter{
-			Formatter: &logrus.JSONFormatter{
-				TimestampFormat: time.RFC3339Nano,
-				FieldMap:        fm,
-			},
+		logger.Formatter = &logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+			FieldMap:        fm,
 		}
 	}
-	logger.Level = l
-	Logger = logger
+
+	Logger = logger.WithFields(logrus.Fields{
+		"@version": "1",
+		"type":     "log",
+	})
 	return nil
 }
 

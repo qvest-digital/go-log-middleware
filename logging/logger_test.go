@@ -34,12 +34,14 @@ type logRecord struct {
 func Test_Logger_Set(t *testing.T) {
 	a := assert.New(t)
 
+	logrus.New()
+
 	// given: an error logger in text format
 	Set("error", true)
 	defer Set("info", false)
-	Logger.Formatter.(*logrus.TextFormatter).DisableColors = true
+	logger.Formatter.(*logrus.TextFormatter).DisableColors = true
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// when: I log something
 	Logger.Info("should be ignored ..")
@@ -47,7 +49,7 @@ func Test_Logger_Set(t *testing.T) {
 
 	// then: only the timestamp error text is contained
 	// and it is text formated
-	a.Regexp(`^@timestamp="(.*?)" level\=error message\=oops foo\=bar.*`, b.String())
+	a.Regexp(`^@timestamp="(.*?)" level\=error message\=oops @version=1 foo\=bar.* type=log`, b.String())
 }
 
 func Test_Logger_Call(t *testing.T) {
@@ -55,9 +57,8 @@ func Test_Logger_Call(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 	AccessLogCookiesBlacklist = []string{"ignore", "user_id"}
-
 	// and a request
 	r, _ := http.NewRequest("GET", "http://www.example.org/foo?q=bar", nil)
 	r.Header = http.Header{
@@ -156,7 +157,7 @@ func Test_Logger_Access(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 	AccessLogCookiesBlacklist = []string{"ignore", "user_id"}
 
 	// Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36
@@ -234,7 +235,7 @@ func Test_Logger_Access_ErrorCases(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and a request
 	r, _ := http.NewRequest("GET", "http://www.example.org/foo", nil)
@@ -286,7 +287,7 @@ func Test_Logger_LifecycleStart(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and
 	someArguments := struct {
@@ -321,7 +322,7 @@ func Test_Logger_LifecycleStop(t *testing.T) {
 
 	// given a logger
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// and an Environment Variable with the Build Number is set
 	os.Setenv("BUILD_NUMBER", "b666")
@@ -348,7 +349,7 @@ func Test_Logger_Cacheinfo(t *testing.T) {
 	Set("debug", false)
 	defer Set("info", false)
 	b := bytes.NewBuffer(nil)
-	Logger.Out = b
+	logger.Out = b
 
 	// when a positive cachinfo is logged
 	Cacheinfo("/foo", true)
