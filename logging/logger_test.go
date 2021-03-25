@@ -236,9 +236,9 @@ func Test_Logger_Access(t *testing.T) {
 	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
 	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
 
-	// when: We log a request with access with IsWithCookies false
+	// when: We log a request with access with AccessLogWithCookies false
 	b.Reset()
-	IsWithCookies = false
+	AccessLogWithCookies = false
 	defer func() { AnonymizedQueryParams = nil }()
 	start = time.Now().Add(-1 * time.Second)
 	Access(r, start, 201)
