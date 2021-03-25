@@ -170,10 +170,10 @@ func Test_Logger_Access(t *testing.T) {
 	// and a request
 	r, _ := http.NewRequest("GET", "http://www.example.org/foo?q=bar", nil)
 	r.Header = http.Header{
-		CorrelationIdHeader: {"correlation-123"},
+		CorrelationIdHeader:     {"correlation-123"},
 		UserCorrelationIdHeader: {"user-correlation-123"},
-		"Cookie":            {"ignore=me; foo=bar;"},
-		"User-Agent":        {"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36"},
+		"Cookie":                {"ignore=me; foo=bar;"},
+		"User-Agent":            {"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36"},
 	}
 	r.RemoteAddr = "127.0.0.1"
 
@@ -235,6 +235,32 @@ func Test_Logger_Access(t *testing.T) {
 
 	_, err = time.Parse(time.RFC3339Nano, data.Timestamp)
 	a.NoError(err, "timestamp should be printed as RFĆ3339Nano but was not")
+
+	// when: We log a request with access with AccessLogWithCookies false
+	b.Reset()
+	AccessLogWithCookies = false
+	defer func() { AnonymizedQueryParams = nil }()
+	start = time.Now().Add(-1 * time.Second)
+	Access(r, start, 201)
+
+	// then: all fields match
+	data = &logRecord{}
+	err = json.Unmarshal(b.Bytes(), data)
+	a.NoError(err)
+	a.Equal("info", data.Level)
+	a.Equal(map[string]string(nil), data.Cookies)
+	a.Equal("correlation-123", data.CorrelationId)
+	a.Equal("user-correlation-123", data.UserCorrelationId)
+	a.InDelta(1000, data.Duration, 0.5)
+	a.Equal("", data.Error)
+	a.Equal("www.example.org", data.Host)
+	a.Equal("GET", data.Method)
+	a.Equal("HTTP/1.1", data.Proto)
+	a.Equal("201 ->GET /foo?...", data.Message)
+	a.Equal("127.0.0.1", data.RemoteIp)
+	a.Equal(201, data.ResponseStatus)
+	a.Equal("access", data.Type)
+	a.Equal("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36", data.UserAgent)
 
 }
 
