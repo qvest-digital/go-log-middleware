@@ -17,6 +17,7 @@ var logger *logrus.Logger
 
 // The of cookies which should not be logged
 var AccessLogCookiesBlacklist []string
+var IsWithCookies = true
 
 var LifecycleEnvVars = []string{"BUILD_NUMBER", "BUILD_HASH", "BUILD_DATE"}
 
@@ -115,7 +116,7 @@ func access(r *http.Request, start time.Time, statusCode int, err error) *logrus
 			cookies[c.Name] = c.Value
 		}
 	}
-	if len(cookies) > 0 {
+	if IsWithCookies && len(cookies) > 0 {
 		fields["cookies"] = cookies
 	}
 

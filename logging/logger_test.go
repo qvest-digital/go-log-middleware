@@ -170,10 +170,10 @@ func Test_Logger_Access(t *testing.T) {
 	// and a request
 	r, _ := http.NewRequest("GET", "http://www.example.org/foo?q=bar", nil)
 	r.Header = http.Header{
-		CorrelationIdHeader: {"correlation-123"},
+		CorrelationIdHeader:     {"correlation-123"},
 		UserCorrelationIdHeader: {"user-correlation-123"},
-		"Cookie":            {"ignore=me; foo=bar;"},
-		"User-Agent":        {"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36"},
+		"Cookie":                {"ignore=me; foo=bar;"},
+		"User-Agent":            {"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36"},
 	}
 	r.RemoteAddr = "127.0.0.1"
 
